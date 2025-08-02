@@ -35,9 +35,9 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
-    title: 'Result',
+    title: 'Results',
     icon: IconCopy,
-    href: '/result',
+    href: '/student/results/all',
   },
   {
     navlabel: true,

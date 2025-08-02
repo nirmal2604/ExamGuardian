@@ -15,16 +15,18 @@ import { Container } from '@mui/material';
 import { useGetQuestionsQuery } from 'src/slices/examApiSlice';
 import { useParams } from 'react-router';
 
-export default function MultipleChoiceQuestion({ questions, saveUserTestScore }) {
+export default function MultipleChoiceQuestion({ questions, saveUserTestScore, onAnswerUpdate }) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [score, setScore] = useState(0);
+  const [startTime, setStartTime] = useState(Date.now());
 
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const [isFinishTest, setisFinishTest] = useState(false);
 
   useEffect(() => {
     setIsLastQuestion(currentQuestion === questions.length - 1);
+    setStartTime(Date.now()); // reset timer on new question
   }, [currentQuestion]);
 
   const handleOptionChange = (event) => {
@@ -32,13 +34,24 @@ export default function MultipleChoiceQuestion({ questions, saveUserTestScore })
   };
 
   const handleNextQuestion = () => {
-    let isCorrect = false;
-    isCorrect =
-      questions[currentQuestion].options.find((option) => option.isCorrect)._id === selectedOption;
+    const q = questions[currentQuestion];
+    const correctOptionId = q.options.find((option) => option.isCorrect)?._id;
+    const isCorrect = correctOptionId === selectedOption;
+
     if (isCorrect) {
       setScore(score + 1);
       saveUserTestScore();
     }
+
+    const answerObj = {
+      questionId: q._id,
+      studentAnswer: selectedOption,
+      correctAnswer: correctOptionId,
+      isCorrect,
+      timeSpent: Math.floor((Date.now() - startTime) / 1000)
+    };
+
+    if (onAnswerUpdate) onAnswerUpdate(answerObj);
 
     setSelectedOption(null);
     if (currentQuestion < questions.length - 1) {
@@ -91,3 +104,4 @@ export default function MultipleChoiceQuestion({ questions, saveUserTestScore })
     </Card>
   );
 }
+

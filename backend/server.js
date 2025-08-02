@@ -5,6 +5,8 @@ import connectDB from "./config/db.js";
 import cookieParser from "cookie-parser";
 import examRoutes from "./routes/examRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import submissionRoutes from "./routes/submissionRoutes.js";
+
 dotenv.config();
 connectDB();
 const app = express();
@@ -18,6 +20,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/users", examRoutes);
+app.use("/api/submissions", submissionRoutes);
 
 // we we are deploying this in production
 // make frontend build then

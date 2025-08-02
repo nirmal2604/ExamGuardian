@@ -10,6 +10,7 @@ import { useGetExamsQuery, useGetQuestionsQuery } from '../../slices/examApiSlic
 import { useSaveCheatingLogMutation } from 'src/slices/cheatingLogApiSlice';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 const TestPage = () => {
   const { examId, testId } = useParams();
@@ -17,6 +18,9 @@ const TestPage = () => {
   const [selectedExam, setSelectedExam] = useState([]);
   const [examDurationInSeconds, setexamDurationInSeconds] = useState(0);
   const { data: userExamdata } = useGetExamsQuery();
+
+  const [submittedAnswers, setSubmittedAnswers] = useState([]);
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0); // optional if per-question time not tracked
 
   useEffect(() => {
     if (userExamdata) {
@@ -45,11 +49,56 @@ const TestPage = () => {
     email: '',
   });
 
+  const submitExamResult = async () => {
+    // Don't calculate here - let backend handle it
+    const submissionData = {
+      examId,
+      answers: submittedAnswers,
+      totalTimeSpent: totalTimeSpent,
+    };
+    console.log("Submitting data:", submissionData); // Add this line
+
+    try {
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      };
+      await axios.post("/api/submissions", submissionData, config);
+      toast.success("Exam submitted successfully");
+    } catch (error) {
+      console.error("Submission error:", error);
+      console.error("Error response:", error.response?.data); // Add this line
+      const errorMessage = error.response?.data?.message || "Failed to submit exam result";
+      toast.error(errorMessage);
+    }
+  };
+
   useEffect(() => {
     if (data) {
       setQuestions(data);
     }
   }, [data]);
+
+  // Fixed answer update handler
+  const handleAnswerUpdate = (answerObj) => {
+    setSubmittedAnswers((prev) => {
+      // Find if answer for this question already exists
+      const existingIndex = prev.findIndex(a => a.questionId === answerObj.questionId);
+      
+      if (existingIndex >= 0) {
+        // Update existing answer
+        const updated = [...prev];
+        updated[existingIndex] = answerObj;
+        return updated;
+      } else {
+        // Add new answer
+        return [...prev, answerObj];
+      }
+    });
+  };
 
   const handleTestSubmission = async () => {
     try {
@@ -63,13 +112,16 @@ const TestPage = () => {
 
       await saveCheatingLogMutation(cheatingLog).unwrap();
 
-      toast.success('User Logs Saved!!');
+      await submitExamResult(); // 👉 submit the answers to backend
+
+      toast.success("User logs and results saved!");
 
       navigate(`/Success`);
     } catch (error) {
       console.log('cheatlog: ', error);
     }
   };
+
   const saveUserTestScore = () => {
     setScore(score + 1);
   };
@@ -77,6 +129,7 @@ const TestPage = () => {
   const saveCheatingLog = async (cheatingLog) => {
     console.log(cheatingLog);
   };
+
   return (
     <PageContainer title="TestPage" description="This is TestPage">
       <Box pt="3rem">
@@ -95,7 +148,11 @@ const TestPage = () => {
                 {isLoading ? (
                   <CircularProgress />
                 ) : (
-                  <MultipleChoiceQuestion questions={data} saveUserTestScore={saveUserTestScore} />
+                  <MultipleChoiceQuestion 
+                    questions={data} 
+                    saveUserTestScore={saveUserTestScore} 
+                    onAnswerUpdate={handleAnswerUpdate}
+                  />
                 )}
               </Box>
             </BlankCard>
