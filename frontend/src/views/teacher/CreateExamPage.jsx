@@ -35,6 +35,8 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 // Stats data
 const platformStats = [
@@ -304,14 +306,31 @@ const FormField = memo(({
   );
 });
 
-const CreateExamPage = memo(({ onSubmit, loading = false }) => {
+const CreateExamPage = memo(({ onSubmit }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [focusedField, setFocusedField] = useState(null);
+  const [loading, setLoading] = useState(false); // ✅ add this
 
-  const handleSubmit = useCallback((values) => {
-    onSubmit?.(values);
-  }, [onSubmit]);
+
+  const handleSubmit = async (values) => {
+    const payload = {
+      examName: values.examName,
+      duration: values.examDuration,        // ✅ matches schema
+      totalQuestions: values.totalQuestions,
+      liveDate: values.liveDateTime,        // ✅ renamed
+      deadDate: values.deadDateTime,        // ✅ renamed
+    };
+    try {
+      setLoading(true);
+      await axios.post("/api/users/exam", payload); // or use a Redux action
+      toast.success("Exam created!");
+    } catch (err) {
+      toast.error("Failed to create exam");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formik = useFormik({
     initialValues: {

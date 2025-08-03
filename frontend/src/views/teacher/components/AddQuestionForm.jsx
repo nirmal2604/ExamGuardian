@@ -38,12 +38,11 @@ import swal from 'sweetalert';
 import { 
   useCreateQuestionMutation, 
   useGetExamsQuery,
-  useGetQuestionsQuery // Using existing hook
+  useGetQuestionsQuery
 } from 'src/slices/examApiSlice';
 import { toast } from 'react-toastify';
 import { keyframes } from '@emotion/react';
 
-// Enhanced animations
 const pulseAnimation = keyframes`
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
@@ -65,7 +64,7 @@ const AddQuestionForm = () => {
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-  
+
   // States
   const [newlyAddedQuestions, setNewlyAddedQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
@@ -78,10 +77,10 @@ const AddQuestionForm = () => {
   // API hooks
   const [createQuestion, { isLoading }] = useCreateQuestionMutation();
   const { data: examsData, isLoading: examsLoading } = useGetExamsQuery();
-  const { 
-    data: existingQuestions = [], 
+  const {
+    data: existingQuestions = [],
     isLoading: questionsLoading,
-    refetch: refetchQuestions 
+    refetch: refetchQuestions
   } = useGetQuestionsQuery(selectedExamId, {
     skip: !selectedExamId
   });
@@ -103,6 +102,7 @@ const AddQuestionForm = () => {
     setCorrectOptions(updatedCorrectOptions);
   };
 
+  // OPTIMIZED: No unnecessary refetch on every question add
   const handleAddQuestion = async () => {
     if (newQuestion.trim() === '' || newOptions.some((option) => option.trim() === '')) {
       swal('', 'Please fill out the question and all options.', 'error');
@@ -137,24 +137,34 @@ const AddQuestionForm = () => {
           theme: 'colored',
         });
         
+        // Add to newly added questions (creates smooth animation for new questions only)
         setNewlyAddedQuestions([...newlyAddedQuestions, res]);
+        
+        // Clear form
         setNewQuestion('');
         setNewOptions(['', '', '', '']);
         setCorrectOptions([false, false, false, false]);
         
-        // Refetch existing questions to get updated list
-        refetchQuestions();
+        // REMOVED: refetchQuestions() - This was causing the reload effect!
+        // Only refetch when necessary (like session completion or exam change)
       }
     } catch (err) {
       swal('', 'Failed to create question. Please try again.', 'error');
     }
   };
 
-  const handleSubmitQuestions = () => {
+  // OPTIMIZED: Refetch only when session is completed
+  const handleSubmitQuestions = async () => {
     setNewlyAddedQuestions([]);
     setNewQuestion('');
     setNewOptions(['', '', '', '']);
     setCorrectOptions([false, false, false, false]);
+    
+    // Refetch to sync newly added questions with existing questions
+    if (selectedExamId) {
+      await refetchQuestions();
+    }
+    
     toast.info('Session completed! All questions have been saved.', {
       position: 'top-right',
       autoClose: 3000,
@@ -167,8 +177,13 @@ const AddQuestionForm = () => {
     });
   };
 
+  // OPTIMIZED: QuestionCard with stable animations
   const QuestionCard = ({ question, isNew = false, index }) => (
-    <Grow in={true} timeout={300 + index * 100}>
+    <Grow 
+      in={true} 
+      timeout={isNew ? 300 + index * 100 : 0}  // Only animate new questions
+      key={isNew ? `new-${index}` : `existing-${question.id || index}`}
+    >
       <Card
         elevation={isNew ? 4 : 2}
         sx={{
@@ -241,7 +256,8 @@ const AddQuestionForm = () => {
                     size="small" 
                     color="primary"
                     sx={{ 
-                      fontWeight: 600 
+                      fontWeight: 600,
+                      animation: `${pulseAnimation} 2s infinite`
                     }}
                   />
                 )}
@@ -343,6 +359,7 @@ const AddQuestionForm = () => {
               backgroundColor: isDark ? '#2a2d3a' : 'background.paper',
               boxShadow: theme.shadows[4],
               border: isDark ? '1px solid #4a5568' : `1px solid ${theme.palette.divider}`,
+              animation: `${floatAnimation} 3s ease-in-out infinite`,
             }}
           >
             <SchoolIcon 
@@ -695,9 +712,8 @@ const AddQuestionForm = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      cursor: 'pointer',
+                      // Remove cursor and onClick from here
                     }}
-                    onClick={() => setShowExistingQuestions(!showExistingQuestions)}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <PreviewIcon sx={{ color: isDark ? '#a0aec0' : 'action.active' }} />
@@ -714,7 +730,10 @@ const AddQuestionForm = () => {
                         sx={{ '& .MuiBadge-badge': { fontWeight: 'bold' } }}
                       />
                     </Box>
-                    <IconButton sx={{ color: isDark ? '#e2e8f0' : 'text.primary' }}>
+                    <IconButton 
+                      sx={{ color: isDark ? '#e2e8f0' : 'text.primary' }}
+                      onClick={() => setShowExistingQuestions(!showExistingQuestions)}  // Move onClick here
+                    >
                       {showExistingQuestions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
                   </Box>
@@ -761,70 +780,76 @@ const AddQuestionForm = () => {
 
               {/* Newly Added Questions Section */}
               {newlyAddedQuestions.length > 0 && (
-                <Card 
-                  elevation={4} 
-                  sx={{ 
-                    borderRadius: 3, 
-                    overflow: 'hidden',
-                    background: isDark ? '#2d3748' : 'background.paper',
-                    border: isDark ? '1px solid #4a5568' : 'none',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      p: 2,
-                      background: isDark
-                        ? '#2563eb'
-                        : `linear-gradient(135deg, ${theme.palette.primary.main}20, ${theme.palette.secondary.main}20)`,
-                      borderBottom: isDark ? '1px solid #4a5568' : `1px solid ${theme.palette.divider}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: 'pointer',
+                // <Fade in={true} timeout={500}>
+                  <Card 
+                    elevation={4} 
+                    sx={{ 
+                      borderRadius: 3, 
+                      overflow: 'hidden',
+                      background: isDark ? '#2d3748' : 'background.paper',
+                      border: isDark ? '1px solid #4a5568' : 'none',
                     }}
-                    onClick={() => setShowNewQuestions(!showNewQuestions)}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <AddIcon sx={{ color: isDark ? 'white' : theme.palette.primary.main }} />
-                      <Typography 
-                        variant="h6" 
-                        fontWeight={600} 
-                        sx={{ color: isDark ? 'white' : 'text.primary' }}
-                      >
-                        Newly Added Questions
-                      </Typography>
-                      <Badge 
-                        badgeContent={newlyAddedQuestions.length} 
-                        color="primary"
-                        sx={{ 
-                          '& .MuiBadge-badge': { 
-                            fontWeight: 'bold',
-                            backgroundColor: isDark ? 'white' : theme.palette.primary.main,
-                            color: isDark ? theme.palette.primary.main : 'white',
-                          } 
-                        }}
-                      />
-                    </Box>
-                    <IconButton sx={{ color: isDark ? 'white' : 'text.primary' }}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        background: isDark
+                          ? '#2563eb'
+                          : `linear-gradient(135deg, ${theme.palette.primary.main}20, ${theme.palette.secondary.main}20)`,
+                        borderBottom: isDark ? '1px solid #4a5568' : `1px solid ${theme.palette.divider}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        // cursor: 'pointer',
+                      }}
+                      // onClick={() => setShowNewQuestions(!showNewQuestions)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <AddIcon sx={{ color: isDark ? 'white' : theme.palette.primary.main }} />
+                        <Typography 
+                          variant="h6" 
+                          fontWeight={600} 
+                          sx={{ color: isDark ? 'white' : 'text.primary' }}
+                        >
+                          Newly Added Questions
+                        </Typography>
+                        <Badge 
+                          badgeContent={newlyAddedQuestions.length} 
+                          color="primary"
+                          sx={{ 
+                            '& .MuiBadge-badge': { 
+                              fontWeight: 'bold',
+                              backgroundColor: isDark ? 'white' : theme.palette.primary.main,
+                              color: isDark ? theme.palette.primary.main : 'white',
+                              animation: `${pulseAnimation} 2s infinite`,
+                            } 
+                          }}
+                        />
+                      </Box>
+                       <IconButton 
+                      sx={{ color: isDark ? 'white' : 'text.primary' }}
+                      onClick={() => setShowNewQuestions(!showNewQuestions)}  // Move onClick here
+                    >
                       {showNewQuestions ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
-                  </Box>
-                  
-                  <Collapse in={showNewQuestions}>
-                    <Box sx={{ p: 3 }}>
-                      <Stack spacing={3}>
-                        {newlyAddedQuestions.map((questionObj, index) => (
-                          <QuestionCard 
-                            key={index} 
-                            question={questionObj} 
-                            isNew={true}
-                            index={index}
-                          />
-                        ))}
-                      </Stack>
                     </Box>
-                  </Collapse>
-                </Card>
+                    
+                    <Collapse in={showNewQuestions}>
+                      <Box sx={{ p: 3 }}>
+                        <Stack spacing={3}>
+                          {newlyAddedQuestions.map((questionObj, index) => (
+                            <QuestionCard 
+                              key={`new-${index}`} 
+                              question={questionObj} 
+                              isNew={true}
+                              index={index}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+                    </Collapse>
+                  </Card>
+                // </Fade>
               )}
             </Stack>
           </Grid>
