@@ -29,6 +29,13 @@ const examSchema = mongoose.Schema(
       default: uuidv4, // Generate a new UUID for each document
       unique: true, // Ensure uniqueness of UUIDs
     },
+    // NEW FIELD: Link exam to teacher who created it
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true // For faster queries
+    },
   },
   {
     timestamps: true,

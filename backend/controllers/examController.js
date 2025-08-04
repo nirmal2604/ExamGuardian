@@ -15,12 +15,19 @@ const getExams = asyncHandler(async (req, res) => {
 const createExam = asyncHandler(async (req, res) => {
   const { examName, totalQuestions, duration, liveDate, deadDate } = req.body;
 
+  // Check if user is a teacher
+  if (req.user.role !== 'teacher') {
+    res.status(403);
+    throw new Error("Access denied. Only teachers can create exams.");
+  }
+
   const exam = new Exam({
     examName,
     totalQuestions,
     duration,
     liveDate,
     deadDate,
+    createdBy: req.user._id // Automatically assign current teacher
   });
 
   const createdExam = await exam.save();
