@@ -14,11 +14,14 @@ connectDB();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS Configuration for Vercel frontend
+const allowedOrigins = [
+  "http://localhost:3000",    
+  "http://localhost:5173",    
+  "https://examguardian-frontend.vercel.app"  // Placeholder
+];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? [process.env.FRONTEND_URL || "https://your-app-name.vercel.app"] 
-    : ["http://localhost:3000", "http://localhost:5173"],
+  origin: allowedOrigins,
   credentials: true
 }));
 
