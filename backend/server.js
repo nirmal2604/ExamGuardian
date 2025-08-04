@@ -1,5 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
+
+import cors from "cors"; // Add this import
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 import connectDB from "./config/db.js";
 import cookieParser from "cookie-parser";
@@ -12,7 +14,15 @@ connectDB();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// to parse req boy
+// CORS Configuration for Vercel frontend
+app.use(cors({
+  origin: process.env.NODE_ENV === "production" 
+    ? [process.env.FRONTEND_URL || "https://your-app-name.vercel.app"] 
+    : ["http://localhost:3000", "http://localhost:5173"],
+  credentials: true
+}));
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -22,23 +32,18 @@ app.use("/api/users", userRoutes);
 app.use("/api/users", examRoutes);
 app.use("/api/submissions", submissionRoutes);
 
-// we we are deploying this in production
-// make frontend build then
-if (process.env.NODE_ENV === "production") {
-  const __dirname = path.resolve();
-  // we making front build folder static to serve from this app
-  app.use(express.static(path.join(__dirname, "/frontend/dist")));
-
-  // if we get an routes that are not define by us we show then index html file
-  // every enpoint that is not api/users go to this index file
-  app.get("*", (req, res) =>
-    res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"))
-  );
-} else {
-  app.get("/", (req, res) => {
-    res.send("<h1>server is running </h1>");
+// Simple API status endpoint (removed static file serving for separate deployment)
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "API is running successfully",
+    timestamp: new Date().toISOString()
   });
-}
+});
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", timestamp: new Date().toISOString() });
+});
 
 // Custom Middlewares
 app.use(notFound);
@@ -46,12 +51,5 @@ app.use(errorHandler);
 
 // Server
 app.listen(port, () => {
-  console.log(`server is running on http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
 });
-
-// Todos:
-// -**POST /api/users**- Register a users
-// -**POST /api/users/auth**- Authenticate a user and get token
-// -**POST /api/users/logout**- logou user and clear cookie
-// -**GET /api/users/profile**- Get user Profile
-// -**PUT /api/users/profile**- Update user Profile
