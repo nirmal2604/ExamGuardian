@@ -47,8 +47,8 @@ const Router = createBrowserRouter(
           <Route index={true} path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" exact={true} element={<ExamPage />} />
           <Route path="/sample-page" exact={true} element={<SamplePage />} />
-          <Route path="/Success" exact={true} element={<Success />} />
-          <Route path="/exam" exact={true} element={<ExamPage />} />
+          <Route path="/Success" exact={true} element={<Success />} 
+          // <Route path="/exam" exact={true} element={<ExamPage />} />
           <Route path="exam/:examId/result" exact={true} element={<ResultPage />} />
           <Route path="/student/results/all" exact={true} element={<StudentResultsList />} />
           <Route path="" element={<TeacherRoute />}>
@@ -57,7 +57,7 @@ const Router = createBrowserRouter(
             <Route path="/exam-log" exact={true} element={<ExamLogPage />} />
           </Route>
         </Route>
-        <Route path="/" element={<ExamLayout />}>
+        <Route path="/exam-view" element={<ExamLayout />}>
           <Route path="exam/:examId" exact={true} element={<ExamDetails />} />
           <Route path="exam/:examId/:testId" exact={true} element={<TestPage />} />
         </Route>
