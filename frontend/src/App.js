@@ -1,8 +1,7 @@
 // Theme Provider
 import { CssBaseline, ThemeProvider } from '@mui/material';
-// Router
 import { BrowserRouter } from 'react-router-dom';
-import Router from './routes/Router';
+import { Suspense } from 'react';
 
 // Redux
 import { Provider } from 'react-redux';
@@ -16,6 +15,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ThemeProvider as CustomThemeProvider, useTheme } from './context/ThemeContext';
 import { getTheme } from './theme/Theme';
 
+// Routes
+import Router from './routes/Router';
+
 const ThemedApp = () => {
   const { theme } = useTheme();
   const muiTheme = getTheme(theme);
@@ -26,7 +28,9 @@ const ThemedApp = () => {
         <ToastContainer theme={theme} />
         <CssBaseline />
         <BrowserRouter>
-          <Router />  {/* ✅ FIXED this line */}
+          <Suspense fallback={<div>Loading...</div>}>
+            <Router />
+          </Suspense>
         </BrowserRouter>
       </Provider>
     </ThemeProvider>
