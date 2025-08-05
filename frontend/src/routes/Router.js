@@ -44,35 +44,35 @@ const Router = createBrowserRouter(
       <Route path="" element={<PrivateRoute />}>
         {/* // Main layout */}
         <Route path="/" element={<FullLayout />}>
-          <Route index={true} path="/" element={<Navigate to="/dashboard" />} />
-          <Route path="/dashboard" exact={true} element={<ExamPage />} />
-          <Route path="/exam" exact={true} element={<Navigate to="/dashboard" replace />} />
-          <Route path="/sample-page" exact={true} element={<SamplePage />} />
-          <Route path="/Success" exact={true} element={<Success />} />
-          <Route path="/exam/:examId/result" exact={true} element={<ResultPage />} />
-          <Route path="/student/results/all" exact={true} element={<StudentResultsList />} />
+          <Route index element={<Navigate to="/dashboard" />} />
+          <Route path="dashboard" element={<ExamPage />} />
+          <Route path="exam" element={<Navigate to="/dashboard" replace />} />
+          <Route path="sample-page" element={<SamplePage />} />
+          <Route path="Success" element={<Success />} />
+          <Route path="exam/:examId/result" element={<ResultPage />} />
+          <Route path="student/results/all" element={<StudentResultsList />} />
           <Route path="" element={<TeacherRoute />}>
-            <Route path="/create-exam" exact={true} element={<CreateExamPage />} />
-            <Route path="/add-questions" exact={true} element={<AddQuestions />} />
-            <Route path="/exam-log" exact={true} element={<ExamLogPage />} />
+            <Route path="create-exam" element={<CreateExamPage />} />
+            <Route path="add-questions" element={<AddQuestions />} />
+            <Route path="exam-log" element={<ExamLogPage />} />
           </Route>
         </Route>
         {/* Exam routes using ExamLayout */}
-        <Route path="/exam/:examId" element={<ExamLayout />}>
+        <Route path="exam/:examId" element={<ExamLayout />}>
           <Route index element={<ExamDetails />} />
           <Route path=":testId" element={<TestPage />} />
         </Route>
       </Route>
       {/* User layout */}
-      <Route path="/user" element={<FullLayout />}>
-        <Route path="account" exact={true} element={<UserAccount />} />
+      <Route path="user" element={<FullLayout />}>
+        <Route path="account" element={<UserAccount />} />
       </Route>
 
       {/* Authentication layout */}
-      <Route path="/auth" element={<BlankLayout />}>
+      <Route path="auth" element={<BlankLayout />}>
         <Route path="404" element={<Error />} />
-        <Route path="/auth/register" element={<Register />} />
-        <Route path="/auth/login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+        <Route path="login" element={<Login />} />
         {/* <Route path="*" element={<Navigate to="/auth/404" />} /> */}
       </Route>
     </>,
