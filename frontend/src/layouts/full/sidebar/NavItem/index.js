@@ -44,13 +44,13 @@ const NavItem = ({ item, level = 1, pathDirect, onClick, isCollapsed = false }) 
       <ListItemStyled
         button
         component={item.external ? 'a' : NavLink}
-        to={item.href}
-        href={item.external ? item.href : ''}
+        {...(!item.external && { to: item.href })}
+        {...(item.external && { href: item.href, target: '_blank' })}
         disabled={item.disabled}
         selected={pathDirect === item.href}
-        target={item.external ? '_blank' : ''}
         onClick={onClick}
       >
+
         <ListItemIcon
           sx={{
             minWidth: isCollapsed ? 'auto' : '36px',
