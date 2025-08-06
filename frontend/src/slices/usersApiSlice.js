@@ -8,15 +8,13 @@ export const userApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     //Login Api
     login: builder.mutation({
-      //data contain email,password
-
       query: (data) => ({
-        // backend url
         url: `${USERS_URL}/auth`,
         method: 'POST',
         body: data,
       }),
     }),
+
     //Register Mutation Api
     register: builder.mutation({
       query: (data) => ({
