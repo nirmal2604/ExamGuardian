@@ -12,8 +12,10 @@ export const userApiSlice = apiSlice.injectEndpoints({
         url: `${USERS_URL}/auth`,
         method: 'POST',
         body: data,
+        credentials: 'include', // ✅ Add this line
       }),
     }),
+
 
     //Register Mutation Api
     register: builder.mutation({
