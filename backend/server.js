@@ -25,6 +25,20 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log(">> Incoming origin:", origin);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
+// app.use(cors());
+
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
