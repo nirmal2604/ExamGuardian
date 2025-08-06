@@ -62,6 +62,14 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
+app.get('/api/debug-cookie', (req, res) => {
+  res.json({
+    cookie: req.cookies?.jwt || null,
+    message: req.cookies?.jwt ? 'JWT received' : 'No JWT in cookies',
+  });
+});
+
+
 // Custom Middlewares
 app.use(notFound);
 app.use(errorHandler);
