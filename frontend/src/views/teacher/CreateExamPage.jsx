@@ -37,6 +37,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useCreateExamMutation } from 'src/slices/examApiSlice';
 
 // Stats data
 const platformStats = [
@@ -307,28 +308,28 @@ const FormField = memo(({
 });
 
 const CreateExamPage = memo(({ onSubmit }) => {
+  const [createExam, { isLoading }] = useCreateExamMutation();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [focusedField, setFocusedField] = useState(null);
   const [loading, setLoading] = useState(false); // ✅ add this
 
 
-  const handleSubmit = async (values) => {
+   const handleSubmit = async (values) => {
     const payload = {
       examName: values.examName,
-      duration: values.examDuration,        // ✅ matches schema
+      duration: values.examDuration,
       totalQuestions: values.totalQuestions,
-      liveDate: values.liveDateTime,        // ✅ renamed
-      deadDate: values.deadDateTime,        // ✅ renamed
+      liveDate: values.liveDateTime,
+      deadDate: values.deadDateTime,
     };
+    
     try {
-      setLoading(true);
-      await axios.post("/api/exam", payload,{withCredentials: true,}); // or use a Redux action
+      await createExam(payload).unwrap();
       toast.success("Exam created!");
     } catch (err) {
+      console.error('Exam creation error:', err);
       toast.error("Failed to create exam");
-    } finally {
-      setLoading(false);
     }
   };
 
