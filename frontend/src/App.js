@@ -15,8 +15,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ThemeProvider as CustomThemeProvider, useTheme } from './context/ThemeContext';
 import { getTheme } from './theme/Theme';
 
-// Routes
-import Router from './routes/Router';
+// Router
+import { RouterProvider } from 'react-router-dom';
+import Router from './routes/Router'; // NOTE: this is a router object, not a component
 
 const ThemedApp = () => {
   const { theme } = useTheme();
@@ -27,11 +28,10 @@ const ThemedApp = () => {
       <Provider store={store}>
         <ToastContainer theme={theme} />
         <CssBaseline />
-        <BrowserRouter>
-          <Suspense fallback={<div>Loading...</div>}>
-            <Router />
-          </Suspense>
-        </BrowserRouter>
+        {/* Removed BrowserRouter — not needed when using RouterProvider */}
+        <Suspense fallback={<div>Loading...</div>}>
+          <RouterProvider router={Router} />
+        </Suspense>
       </Provider>
     </ThemeProvider>
   );

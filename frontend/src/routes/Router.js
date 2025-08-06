@@ -1,84 +1,76 @@
 import React from 'react';
-import { Navigate, useRoutes, useLocation } from 'react-router-dom';
-import Loadable from '../layouts/full/shared/loadable/Loadable';
+import { Navigate, Route, createBrowserRouter, createRoutesFromElements } from 'react-router-dom';
 
-const BlankLayout = Loadable(React.lazy(() => import('../layouts/blank/BlankLayout')));
-const FullLayout = Loadable(React.lazy(() => import('../layouts/full/FullLayout')));
-const ExamLayout = Loadable(React.lazy(() => import('../layouts/full/ExamLayout')));
+/* **Layouts*** */
+import BlankLayout from '../layouts/blank/BlankLayout';
+import FullLayout from '../layouts/full/FullLayout';
+import ExamLayout from '../layouts/full/ExamLayout';
 
-// Pages
-const SamplePage = Loadable(React.lazy(() => import('../views/sample-page/SamplePage')));
-const Success = Loadable(React.lazy(() => import('../views/Success')));
-const TestPage = Loadable(React.lazy(() => import('../views/student/TestPage')));
-const ExamPage = Loadable(React.lazy(() => import('../views/student/ExamPage')));
-const ExamDetails = Loadable(React.lazy(() => import('../views/student/ExamDetails')));
-const ResultPage = Loadable(React.lazy(() => import('../views/student/ResultPage')));
-const StudentResultsList = Loadable(React.lazy(() => import('../views/student/StudentResultsList')));
-const Error = Loadable(React.lazy(() => import('../views/authentication/Error')));
-const Register = Loadable(React.lazy(() => import('../views/authentication/Register')));
-const Login = Loadable(React.lazy(() => import('../views/authentication/Login')));
-const UserAccount = Loadable(React.lazy(() => import('../views/authentication/UserAccount')));
-const CreateExamPage = Loadable(React.lazy(() => import('../views/teacher/CreateExamPage')));
-const ExamLogPage = Loadable(React.lazy(() => import('../views/teacher/ExamLogPage')));
-const AddQuestions = Loadable(React.lazy(() => import('../views/teacher/AddQuestions')));
-const PrivateRoute = Loadable(React.lazy(() => import('src/views/authentication/PrivateRoute')));
-const TeacherRoute = Loadable(React.lazy(() => import('src/views/authentication/TeacherRoute')));
+/* ***Pages**** */
+import SamplePage from '../views/sample-page/SamplePage';
+import Success from '../views/Success';
 
-const Router = () => {
-  const location = useLocation();
-  const element = useRoutes([
-    {
-      element: <PrivateRoute />,
-      children: [
-        {
-          path: '/',
-          element: <FullLayout />,
-          children: [
-            { index: true, element: <Navigate to="/dashboard" /> },
-            { path: 'dashboard', element: <ExamPage /> },
-            { path: 'exam', element: <Navigate to="/dashboard" replace /> },
-            { path: 'sample-page', element: <SamplePage /> },
-            { path: 'Success', element: <Success /> },
-            { path: 'exam/:examId/result', element: <ResultPage /> },
-            { path: 'student/results/all', element: <StudentResultsList /> },
-            {
-              element: <TeacherRoute />,
-              children: [
-                { path: 'create-exam', element: <CreateExamPage /> },
-                { path: 'add-questions', element: <AddQuestions /> },
-                { path: 'exam-log', element: <ExamLogPage /> },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'exam/:examId',
-          element: <ExamLayout />,
-          children: [
-            { index: true, element: <ExamDetails /> },
-            { path: ':testId', element: <TestPage /> },
-          ],
-        },
-      ],
-    },
-    {
-      path: 'user',
-      element: <FullLayout />,
-      children: [{ path: 'account', element: <UserAccount /> }],
-    },
-    {
-      path: 'auth',
-      element: <BlankLayout />,
-      children: [
-        { path: '404', element: <Error /> },
-        { path: 'register', element: <Register /> },
-        { path: 'login', element: <Login /> },
-      ],
-    },
-    { path: '*', element: <Navigate to="/auth/404" /> },
-  ]);
+//Student Routes
+import TestPage from './../views/student/TestPage';
+import ExamPage from './../views/student/ExamPage';
+import ExamDetails from './../views/student/ExamDetails';
+import ResultPage from './../views/student/ResultPage';
+import StudentResultsList from './../views/student/StudentResultsList';
 
-  return React.cloneElement(element, { key: location.key });
-};
+//Auth Routes
+import Error from '../views/authentication/Error';
+import Register from '../views/authentication/Register';
+import Login from '../views/authentication/Login';
+import UserAccount from '../views/authentication/UserAccount';
+
+// Teacher Routes
+import CreateExamPage from './../views/teacher/CreateExamPage';
+import ExamLogPage from './../views/teacher/ExamLogPage';
+import AddQuestions from './../views/teacher/AddQuestions';
+import PrivateRoute from 'src/views/authentication/PrivateRoute';
+import TeacherRoute from 'src/views/authentication/TeacherRoute';
+
+const Router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      {/* Private Routes */}
+      <Route path="" element={<PrivateRoute />}>
+        {/* Main layout */}
+        <Route path="/" element={<FullLayout />}>
+          <Route index element={<Navigate to="/dashboard" />} />
+          <Route path="dashboard" element={<ExamPage />} />
+          <Route path="exam" element={<Navigate to="/dashboard" replace />} />
+          <Route path="sample-page" element={<SamplePage />} />
+          <Route path="Success" element={<Success />} />
+          <Route path="exam/:examId/result" element={<ResultPage />} />
+          <Route path="student/results/all" element={<StudentResultsList />} />
+          <Route path="" element={<TeacherRoute />}>
+            <Route path="create-exam" element={<CreateExamPage />} />
+            <Route path="add-questions" element={<AddQuestions />} />
+            <Route path="exam-log" element={<ExamLogPage />} />
+          </Route>
+        </Route>
+
+        {/* Exam routes using ExamLayout */}
+        <Route path="exam/:examId" element={<ExamLayout />}>
+          <Route index element={<ExamDetails />} />
+          <Route path=":testId" element={<TestPage />} />
+        </Route>
+      </Route>
+
+      {/* User layout */}
+      <Route path="user" element={<FullLayout />}>
+        <Route path="account" element={<UserAccount />} />
+      </Route>
+
+      {/* Authentication layout */}
+      <Route path="auth" element={<BlankLayout />}>
+        <Route path="404" element={<Error />} />
+        <Route path="register" element={<Register />} />
+        <Route path="login" element={<Login />} />
+      </Route>
+    </>,
+  ),
+);
 
 export default Router;
