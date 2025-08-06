@@ -1,7 +1,7 @@
 import { apiSlice } from './apiSlice';
 
 // Define the base URL for the exams API
-const EXAMS_URL = '/api/users';
+const EXAMS_URL = '/api/exam';
 
 // Inject endpoints for the exam slice
 export const examApiSlice = apiSlice.injectEndpoints({
@@ -9,14 +9,14 @@ export const examApiSlice = apiSlice.injectEndpoints({
     // Get all exams
     getExams: builder.query({
       query: () => ({
-        url: `${EXAMS_URL}/exam`,
+        url: `${EXAMS_URL}/`,
         method: 'GET',
       }),
     }),
     // Create a new exam
     createExam: builder.mutation({
       query: (data) => ({
-        url: `${EXAMS_URL}/exam`,
+        url: `${EXAMS_URL}/`,
         method: 'POST',
         body: data,
       }),
@@ -24,7 +24,7 @@ export const examApiSlice = apiSlice.injectEndpoints({
     // Get questions for a specific exam
     getQuestions: builder.query({
       query: (examId) => ({
-        url: `${EXAMS_URL}/exam/questions/${examId}`,
+        url: `${EXAMS_URL}/questions/${examId}`,
         method: 'GET',
       }),
     }),

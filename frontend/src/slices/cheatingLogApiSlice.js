@@ -1,7 +1,7 @@
 import { apiSlice } from './apiSlice';
 
 // Define the base URL for the exams API
-const EXAMS_URL = '/api/users';
+const EXAMS_URL = '/api/exam';
 
 // Inject endpoints for the exam slice
 export const cheatingLogApiSlice = apiSlice.injectEndpoints({

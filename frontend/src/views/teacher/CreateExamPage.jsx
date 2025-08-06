@@ -323,7 +323,7 @@ const CreateExamPage = memo(({ onSubmit }) => {
     };
     try {
       setLoading(true);
-      await axios.post("/api/users/exam", payload); // or use a Redux action
+      await axios.post("/api/exam", payload); // or use a Redux action
       toast.success("Exam created!");
     } catch (err) {
       toast.error("Failed to create exam");

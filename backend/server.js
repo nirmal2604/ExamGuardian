@@ -25,17 +25,17 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(cors({
-  origin: function (origin, callback) {
-    console.log(">> Incoming origin:", origin);
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true
-}));
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     console.log(">> Incoming origin:", origin);
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true
+// }));
 
 // app.use(cors());
 
@@ -45,8 +45,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Routes
+// server.js
 app.use("/api/users", userRoutes);
-app.use("/api/users", examRoutes);
+app.use("/api/exam", examRoutes);  // Change this to /api/exams
 app.use("/api/submissions", submissionRoutes);
 
 // Simple API status endpoint (removed static file serving for separate deployment)
