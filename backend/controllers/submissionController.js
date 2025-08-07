@@ -253,10 +253,38 @@ const getAllExamsOverview = asyncHandler(async (req, res) => {
 // AI Insights Generation Function using Gemini
 const generateAIInsights = async (questionAnalytics, examData, overallStats) => {
   try {
+    // 1. Initialize the Gemini API client with native JSON mode
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        // This is the most reliable way to force JSON output
+        responseMimeType: "application/json"
+      }
+    });
 
-    // Prepare data for AI analysis - focus on problematic questions
+    // 2. Validate essential inputs
+    if (!Array.isArray(questionAnalytics)) {
+        throw new Error("Invalid question analytics data: Input is not an array.");
+    }
+
+    const hasValidQuestions = questionAnalytics.every((q, index) => {
+        const isValid = q.stats?.accuracy !== undefined && q.question !== undefined && q.stats?.answerDistribution !== undefined;
+        if (!isValid) {
+            console.error(`Validation failed for question at index ${index}:`);
+            console.error(`Question: ${q.question}`);
+            console.error(`- stats.accuracy is undefined: ${q.stats?.accuracy === undefined}`);
+            console.error(`- question is undefined: ${q.question === undefined}`);
+            console.error(`- stats.answerDistribution is undefined: ${q.stats?.answerDistribution === undefined}`);
+        }
+        return isValid;
+    });
+
+    if (!hasValidQuestions) {
+        throw new Error("Invalid question analytics data: One or more question objects are malformed.");
+    }
+
+    // 3. Prepare data for AI analysis (existing code)
     const difficultQuestions = questionAnalytics
       .filter(q => q.stats.accuracy < 70)
       .slice(0, 5) // Top 5 most difficult
@@ -266,190 +294,217 @@ const generateAIInsights = async (questionAnalytics, examData, overallStats) => 
         averageTime: q.stats.averageTimeSpent,
         totalAttempts: q.stats.totalAttempts,
         commonWrongAnswers: Object.entries(q.stats.answerDistribution)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 3)
           .map(([answer, count]) => `"${answer}" (${count} students)`)
       }));
 
+    // 4. Construct the prompt
+    // With native JSON mode, the prompt can be simpler as the model is already constrained
     const prompt = `
-    Analyze this exam performance data and provide practical teaching insights:
+Analyze this exam performance data and provide practical teaching insights. Do not include any text outside the JSON object.
 
-    EXAM OVERVIEW:
-    - Name: ${examData.examName}
-    - Total Questions: ${examData.totalQuestions}
-    - Students who took exam: ${overallStats.totalSubmissions}
-    - Class average: ${overallStats.averageScore}%
+EXAM OVERVIEW:
+- Name: ${examData.examName}
+- Total Questions: ${examData.totalQuestions}
+- Students who took exam: ${overallStats.totalSubmissions}
+- Class average: ${overallStats.averageScore}%
 
-    DIFFICULT QUESTIONS (Below 70% accuracy):
-    ${difficultQuestions.map((q, i) => 
-      `${i+1}. "${q.question}" - ${q.accuracy}% accuracy
-        Common wrong answers: ${q.commonWrongAnswers.join(', ')}`
-    ).join('\n')}
+DIFFICULT QUESTIONS (Below 70% accuracy):
+${difficultQuestions.map((q, i) =>
+    `${i+1}. "${q.question}" - ${q.accuracy}% accuracy
+      Common wrong answers: ${q.commonWrongAnswers.join(', ')}`
+).join('\n')}
 
-    PROVIDE 4 KEY INSIGHTS:
-    1. Overall class performance assessment
-    2. Topics/concepts students struggle with most
-    3. Common misconceptions based on wrong answer patterns
-    4. Specific teaching recommendations
+Return exactly this JSON structure:
+{
+  "performance_assessment": "Overall class performance assessment (max 100 words)",
+  "struggling_topics": "Topics/concepts students struggle with most (max 100 words)",
+  "misconceptions": "Common misconceptions based on wrong answer patterns (max 100 words)",
+  "teaching_recommendations": "Specific, actionable teaching recommendations (max 100 words)"
+}
+Each value must be a plain text string, under 100 words. Do not deviate from this structure.
+`;
 
-    Keep insights practical, specific, and actionable for teachers. Limit to 400 words total.
-    `;
-
+    // 5. Call the Gemini API
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    let text = response.text();
+
+    console.log('--- RAW GEMINI RESPONSE START ---');
+    console.log(text);
+    console.log('--- RAW GEMINI RESPONSE END ---');
+
+    // 6. Log the raw response for debugging
+    console.log('Raw Gemini response:', text);
+
+    // 7. Clean and parse the response with a more robust regex
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      console.error('No JSON object found in the response.');
+      throw new Error("Invalid response format: No JSON object detected.");
+    }
     
-  }catch (error) {
+    text = jsonMatch[0]; // Use the matched JSON string
+    
+    try {
+      const parsed = JSON.parse(text);
+
+      // 8. Validate the parsed JSON structure (existing code)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'performance_assessment' in parsed &&
+        'struggling_topics' in parsed &&
+        'misconceptions' in parsed &&
+        'teaching_recommendations' in parsed
+      ) {
+        return parsed;
+      }
+      throw new Error("Response does not match required JSON structure after cleaning");
+    } catch (parseError) {
+      console.error('JSON parsing failed:', parseError, 'Attempted to parse:', text);
+      // Fallback for parsing errors
+      return {
+        performance_assessment: "AI insights temporarily unavailable.",
+        struggling_topics: "Invalid response format from AI.",
+        misconceptions: "",
+        teaching_recommendations: ""
+      };
+    }
+
+  } catch (error) {
     console.error('AI Insights generation failed:', error);
-    return "AI insights temporarily unavailable. Please try again later.";
+    // General error fallback
+    return {
+      performance_assessment: "AI insights temporarily unavailable.",
+      struggling_topics: "Please try again later.",
+      misconceptions: "",
+      teaching_recommendations: ""
+    };
   }
 };
 
 // @desc Get detailed analytics for a specific exam
 // @route GET /api/submissions/exam/:examId/analytics
 // @access Private (teachers only)
+// @desc Get detailed analytics for a specific exam
+// @route GET /api/submissions/exam/:examId/analytics
+// @access Private (teachers only)
 const getExamAnalytics = asyncHandler(async (req, res) => {
-  const { examId } = req.params;
+  const { examId } = req.params;
 
-  // Check if user is teacher
-  if (req.user.role !== "teacher") {
-    res.status(403);
-    throw new Error("Access denied. Teachers only.");
-  }
+  // Check if user is teacher
+  if (req.user.role !== "teacher") {
+    res.status(403);
+    throw new Error("Access denied. Teachers only.");
+  }
 
-  // Get exam details and verify ownership
-  const exam = await Exam.findOne({ examId, createdBy: req.user._id });
-  if (!exam) {
-    res.status(404);
-    throw new Error("Exam not found or you don't have permission to view it");
-  }
+  // Get exam details and verify ownership
+  const exam = await Exam.findOne({ examId, createdBy: req.user._id });
+  if (!exam) {
+    res.status(404);
+    throw new Error("Exam not found or you don't have permission to view it");
+  }
 
-  // Get all submissions for this exam
-  const submissions = await Submission.find({ examId })
-    .populate("studentId", "name email")
-    .populate("answers.questionId");
+  // Get all submissions for this exam
+  const submissions = await Submission.find({ examId })
+    .populate("studentId", "name email")
+    .populate("answers.questionId");
 
-  // Get all questions for this exam
-  const questions = await Question.find({ examId });
+  // Get all questions for this exam
+  const questions = await Question.find({ examId });
 
-  // Calculate overall exam statistics
-  const totalSubmissions = submissions.length;
-  const averageScore = totalSubmissions > 0 
-    ? Math.round(submissions.reduce((sum, sub) => sum + sub.percentage, 0) / totalSubmissions)
-    : 0;
-  
-  const scoreDistribution = {
-    excellent: submissions.filter(sub => sub.percentage >= 90).length,
-    good: submissions.filter(sub => sub.percentage >= 70 && sub.percentage < 90).length,
-    average: submissions.filter(sub => sub.percentage >= 50 && sub.percentage < 70).length,
-    poor: submissions.filter(sub => sub.percentage < 50).length,
-  };
+  // Calculate overall exam statistics
+  const totalSubmissions = submissions.length;
+  const averageScore = totalSubmissions > 0 
+    ? Math.round(submissions.reduce((sum, sub) => sum + sub.percentage, 0) / totalSubmissions)
+    : 0;
+  
+  const scoreDistribution = {
+    excellent: submissions.filter(sub => sub.percentage >= 90).length,
+    good: submissions.filter(sub => sub.percentage >= 70 && sub.percentage < 90).length,
+    average: submissions.filter(sub => sub.percentage >= 50 && sub.percentage < 70).length,
+    poor: submissions.filter(sub => sub.percentage < 50).length,
+  };
 
-  // Question-wise analysis
-  const questionAnalytics = [];
-  
-  for (const question of questions) {
-    const questionSubmissions = submissions.flatMap(sub => 
-      sub.answers.filter(ans => ans.questionId._id.toString() === question._id.toString())
-    );
+  // Question-wise analysis
+  const questionAnalytics = [];
+  
+  for (const question of questions) {
+    const questionSubmissions = submissions.flatMap(sub => 
+      sub.answers.filter(ans => ans.questionId._id.toString() === question._id.toString())
+    );
 
-    const totalAttempts = questionSubmissions.length;
-    const correctAttempts = questionSubmissions.filter(ans => ans.isCorrect).length;
-    const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
-    
-    // Count answer distribution
-    const answerDistribution = {};
-    questionSubmissions.forEach(ans => {
-      const answer = ans.studentAnswer || "Unanswered";
-      answerDistribution[answer] = (answerDistribution[answer] || 0) + 1;
-    });
+    const totalAttempts = questionSubmissions.length;
+    const correctAttempts = questionSubmissions.filter(ans => ans.isCorrect).length;
+    const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
+    
+    // Count answer distribution
+    const answerDistribution = {};
+    questionSubmissions.forEach(ans => {
+      const answer = ans.studentAnswer || "Unanswered";
+      answerDistribution[answer] = (answerDistribution[answer] || 0) + 1;
+    });
 
-    const averageTimeSpent = totalAttempts > 0 
-      ? Math.round(questionSubmissions.reduce((sum, ans) => sum + (ans.timeSpent || 0), 0) / totalAttempts)
-      : 0;
+    const averageTimeSpent = totalAttempts > 0 
+      ? Math.round(questionSubmissions.reduce((sum, ans) => sum + (ans.timeSpent || 0), 0) / totalAttempts)
+      : 0;
 
-    questionAnalytics.push({
-      questionId: question._id,
-      question: question.question,
-      options: question.options,
-      stats: {
-        totalAttempts,
-        correctAttempts,
-        accuracy,
-        averageTimeSpent,
-        answerDistribution,
-      }
-    });
-  }
+    // PUSH A FULLY FORMED OBJECT FOR EVERY QUESTION
+    questionAnalytics.push({
+      questionId: question._id,
+      question: question.question,
+      options: question.options,
+      stats: {
+        totalAttempts,
+        correctAttempts,
+        accuracy,
+        averageTimeSpent,
+        answerDistribution,
+      }
+    });
+  }
 
-  // Sort questions by accuracy (lowest first - most problematic)
-  questionAnalytics.sort((a, b) => a.stats.accuracy - b.stats.accuracy);
+  // Sort questions by accuracy (lowest first - most problematic)
+  questionAnalytics.sort((a, b) => a.stats.accuracy - b.stats.accuracy);
 
-  //Generate AI insights - ADD THIS HERE
-  const aiInsights = await generateAIInsights(questionAnalytics, exam, {
-    totalSubmissions,
-    averageScore,
-    scoreDistribution
-  });
+  // Generate AI insights
+  const aiInsights = await generateAIInsights(questionAnalytics, exam, {
+    totalSubmissions,
+    averageScore,
+    scoreDistribution
+  });
 
-  // // Generate AI insights with debug info
-  // let aiInsights;
-  // let debugInfo;
-
-  // try {
-  //   aiInsights = await generateAIInsights(questionAnalytics, exam, {
-  //     totalSubmissions,
-  //     averageScore,
-  //     scoreDistribution
-  //   });
-    
-  //   debugInfo = {
-  //     status: "success",
-  //     apiKeyExists: !!process.env.GEMINI_API_KEY,
-  //     apiKeyLength: process.env.GEMINI_API_KEY?.length || 0,
-  //     difficultQuestionsCount: questionAnalytics.filter(q => q.stats.accuracy < 70).length
-  //   };
-    
-  // } catch (error) {
-  //   aiInsights = "AI insights temporarily unavailable. Please try again later.";
-  //   debugInfo = {
-  //     status: "error",
-  //     error: error.message,
-  //     errorType: error.constructor.name,
-  //     apiKeyExists: !!process.env.GEMINI_API_KEY,
-  //     apiKeyLength: process.env.GEMINI_API_KEY?.length || 0
-  //   };
-  // }
-
-  res.status(200).json({
-    message: "Exam analytics retrieved successfully",
-    exam: {
-      examId: exam.examId,
-      examName: exam.examName,
-      totalQuestions: exam.totalQuestions,
-      duration: exam.duration,
-      liveDate: exam.liveDate,
-      deadDate: exam.deadDate,
-    },
-    analytics: {
-      overallStats: {
-        totalSubmissions,
-        averageScore,
-        scoreDistribution,
-      },
-      questionAnalytics,
-      aiInsights : aiInsights,
-      // debugInfo: debugInfo,  // Add this line
-      submissions: submissions.map(sub => ({
-        studentName: sub.studentId.name,
-        studentEmail: sub.studentId.email,
-        score: sub.percentage,
-        correctAnswers: sub.correctAnswers,
-        totalTimeSpent: sub.totalTimeSpent,
-        submittedAt: sub.submittedAt,
-      }))
-    }
-  });
+  res.status(200).json({
+    message: "Exam analytics retrieved successfully",
+    exam: {
+      examId: exam.examId,
+      examName: exam.examName,
+      totalQuestions: exam.totalQuestions,
+      duration: exam.duration,
+      liveDate: exam.liveDate,
+      deadDate: exam.deadDate,
+    },
+    analytics: {
+      overallStats: {
+        totalSubmissions,
+        averageScore,
+        scoreDistribution,
+      },
+      questionAnalytics,
+      aiInsights,
+      submissions: submissions.map(sub => ({
+        studentName: sub.studentId.name,
+        studentEmail: sub.studentId.email,
+        score: sub.percentage,
+        correctAnswers: sub.correctAnswers,
+        totalTimeSpent: sub.totalTimeSpent,
+        submittedAt: sub.submittedAt,
+      }))
+    }
+  });
 });
 
 export {
