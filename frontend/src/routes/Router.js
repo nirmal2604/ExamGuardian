@@ -29,6 +29,8 @@ import ExamLogPage from './../views/teacher/ExamLogPage';
 import AddQuestions from './../views/teacher/AddQuestions';
 import PrivateRoute from 'src/views/authentication/PrivateRoute';
 import TeacherRoute from 'src/views/authentication/TeacherRoute';
+import TeacherExamsOverview from 'src/views/teacher/TeacherExamOverview';
+import ExamDetailedView from 'src/views/teacher/ExamDetailedView';
 
 const Router = createBrowserRouter(
   createRoutesFromElements(
@@ -48,6 +50,8 @@ const Router = createBrowserRouter(
             <Route path="create-exam" element={<CreateExamPage />} />
             <Route path="add-questions" element={<AddQuestions />} />
             <Route path="exam-log" element={<ExamLogPage />} />
+            <Route path="teacher/exams/overview" element={<TeacherExamsOverview />} />
+            <Route path="teacher/exam/:examId/details" element={<ExamDetailedView />} />
           </Route>
         </Route>
 
