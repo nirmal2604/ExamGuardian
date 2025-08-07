@@ -31,7 +31,7 @@ export const examApiSlice = apiSlice.injectEndpoints({
     // Create a new question for an exam
     createQuestion: builder.mutation({
       query: (data) => ({
-        url: `${EXAMS_URL}/exam/questions`,
+        url: `${EXAMS_URL}/questions`,
         method: 'POST',
         body: data,
       }),
