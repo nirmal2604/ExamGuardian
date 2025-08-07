@@ -36,6 +36,23 @@ export const submissionApiSlice = apiSlice.injectEndpoints({
         method: 'GET',
       }),
     }),
+
+    // ADD THIS: Get all exams overview for teachers
+    getAllExamsOverview: builder.query({
+      query: () => ({
+        url: `${SUBMISSIONS_URL}/teacher/all-exams`,
+        method: 'GET',
+      }),
+    }),
+
+    // ADD THIS: Get detailed analytics for a specific exam
+    getExamAnalytics: builder.query({
+      query: (examId) => ({
+        url: `${SUBMISSIONS_URL}/exam/${examId}/analytics`,
+        method: 'GET',
+      }),
+    }),
+
   }),
 });
 
@@ -44,4 +61,6 @@ export const {
   useGetStudentResultQuery,
   useGetAllStudentResultsQuery,
   useGetExamSubmissionsQuery,
+  useGetAllExamsOverviewQuery,
+  useGetExamAnalyticsQuery,
 } = submissionApiSlice;
