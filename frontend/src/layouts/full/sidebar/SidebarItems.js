@@ -1,5 +1,5 @@
 import React from 'react';
-import Menuitems from './MenuItems';
+import MenuItems, { Menuitems as StaticMenuItems } from './MenuItems';
 import { useLocation } from 'react-router';
 import { Box, List } from '@mui/material';
 import NavItem from './NavItem';
@@ -10,6 +10,7 @@ const SidebarItems = ({ isCollapsed }) => {
   const { userInfo } = useSelector((state) => state.auth);
   const { pathname } = useLocation();
   const pathDirect = pathname;
+  const menuItems = userInfo?.role ? MenuItems(userInfo.role) : StaticMenuItems; // fallback
 
   return (
     <Box
@@ -18,27 +19,12 @@ const SidebarItems = ({ isCollapsed }) => {
       }}
     >
       <List sx={{ pt: 0 }} className="sidebarNav">
-        {Menuitems.map((item) => {
-          // Skip certain items for student
-          if (
-            userInfo.role === 'student' &&
-            ['Create Exam', 'Add Questions', 'Exam Logs'].includes(item.title)
-          ) {
-            return null;
-          }
-
-          // Handle subheader/group
+        {menuItems.map((item) => {
           if (item.subheader) {
-            if (userInfo.role === 'student' && item.subheader === 'Teacher') {
-              return null;
-            }
-
-            // ✅ When collapsed, you might want to hide group labels:
             return !isCollapsed ? (
               <NavGroup item={item} key={item.subheader} />
             ) : null;
           } else {
-            // ✅ Pass isCollapsed to NavItem so it can show only icon
             return (
               <NavItem
                 item={item}
@@ -49,6 +35,7 @@ const SidebarItems = ({ isCollapsed }) => {
             );
           }
         })}
+
       </List>
     </Box>
   );
